@@ -10,6 +10,7 @@ public class CharacterInputs : MonoBehaviour
 
     float horizontalMove = 0f;
     bool jump = false;
+    bool dash = false;
     // Start is called before the first frame update
     void Start()
     {
@@ -20,18 +21,26 @@ public class CharacterInputs : MonoBehaviour
     void Update()
     {
         horizontalMove = Input.GetAxisRaw("Horizontal");
-        if(Input.GetAxisRaw("Jump") == 1)
+
+        if (Input.GetButtonDown("Fire3"))
         {
-            jump = true;
+            controller.Dash();
         }
-        else
+
+
+
+        if (Input.GetButtonDown("Jump"))
         {
-            jump = false;
+            controller.Jump();
         }
+
 
     }
     void FixedUpdate()
     {
-        controller.Move(horizontalMove * speed * Time.deltaTime, false, jump);
+        controller.Move(horizontalMove * speed * Time.deltaTime);
+
+
+
     }
 }

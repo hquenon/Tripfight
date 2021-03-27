@@ -4,14 +4,38 @@ using UnityEngine.Events;
 public class CharacterController2D : MonoBehaviour
 {
 	[SerializeField] private float m_JumpForce = 400f;                          // Amount of force added when the player jumps.
+	[SerializeField] private float m_WallJumpForce = 400f;                          // Amount of force added when the player jumps.
+	[SerializeField] private int m_MaxJumps = 2;
+
+	[SerializeField] private float m_DashForce = 400f;
+	[SerializeField] private int m_MaxDashes = 2;
+
+	[SerializeField] private float m_defaultGravity = 5;
+	[SerializeField] private float m_wallGravity = 1;
+
 	[Range(0, 1)] [SerializeField] private float m_CrouchSpeed = .36f;          // Amount of maxSpeed applied to crouching movement. 1 = 100%
 	[Range(0, .3f)] [SerializeField] private float m_MovementSmoothing = .05f;  // How much to smooth out the movement
-	[SerializeField] private bool m_AirControl = false;                         // Whether or not a player can steer while jumping;
+	[SerializeField] private bool m_AirControl = true;                         // Whether or not a player can steer while jumping;
+
+	[Header("Wall checks")]
+	[Space]
 	[SerializeField] private LayerMask m_WhatIsGround;                          // A mask determining what is ground to the character
 	[SerializeField] private Transform m_GroundCheck;                           // A position marking where to check if the player is grounded.
 	[SerializeField] private Transform m_CeilingCheck;                          // A position marking where to check for ceilings
+	[SerializeField] private Transform m_LeftCheck;                           // A position marking where to check if the player is grounded.
+	[SerializeField] private Transform m_RightCheck;                          // A position marking where to check for ceilings
 	[SerializeField] private Collider2D m_CrouchDisableCollider;                // A collider that will be disabled when crouching
 
+
+	[Header("Events")]
+	[Space]
+	public UnityEvent OnLandEvent;
+	[System.Serializable]
+	public class BoolEvent : UnityEvent<bool> { }
+	public BoolEvent OnCrouchEvent;
+
+
+	private bool m_wasCrouching = false;
 	const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
 	private bool m_Grounded;            // Whether or not the player is grounded.
 	const float k_CeilingRadius = .2f; // Radius of the overlap circle to determine if the player can stand up
@@ -21,16 +45,19 @@ public class CharacterController2D : MonoBehaviour
 	private Vector3 m_Velocity = Vector3.zero;
 	private bool CanDoubleJump;
 
-	[Header("Events")]
-	[Space]
+	/*state*/
+	private bool touchWallRight;
+	private bool touchGround;
+	private bool touchCeiling;
 
-	public UnityEvent OnLandEvent;
+	private bool canMove;
 
-	[System.Serializable]
-	public class BoolEvent : UnityEvent<bool> { }
+	private bool wasInTheAir;
+	private bool wasTouchingWall;
 
-	public BoolEvent OnCrouchEvent;
-	private bool m_wasCrouching = false;
+
+	private int jumps;
+
 
 	private void Awake()
 	{
@@ -43,71 +70,134 @@ public class CharacterController2D : MonoBehaviour
 			OnCrouchEvent = new BoolEvent();
 	}
 
-	private void FixedUpdate()
+	private bool doesTouchGround(Transform check, float checkRadius)
 	{
-		bool wasGrounded = m_Grounded;
-		m_Grounded = false;
-
-		// The player is grounded if a circlecast to the groundcheck position hits anything designated as ground
-		// This can be done using layers instead but Sample Assets will not overwrite your project settings.
-		Collider2D[] colliders = Physics2D.OverlapCircleAll(m_GroundCheck.position, k_GroundedRadius, m_WhatIsGround);
+		Collider2D[] colliders = Physics2D.OverlapCircleAll(check.position, checkRadius, m_WhatIsGround);
 		for (int i = 0; i < colliders.Length; i++)
 		{
 			if (colliders[i].gameObject != gameObject)
 			{
-				m_Grounded = true;
-				if (!wasGrounded)
-					OnLandEvent.Invoke();
+				return true;
 			}
 		}
+		return false;
 	}
 
-
-	public void Move(float move, bool crouch, bool jump)
+	private void FixedUpdate()
 	{
-		// If crouching, check to see if the character can stand up
-		if (!crouch)
+		bool wasGrounded = m_Grounded;
+		m_Grounded = doesTouchGround(m_GroundCheck, .2f);
+		// The player is grounded if a circlecast to the groundcheck position hits anything designated as ground
+		// This can be done using layers instead but Sample Assets will not overwrite your project settings.
+		if (m_Grounded && !wasGrounded)
 		{
-			// If the character has a ceiling preventing them from standing up, keep them crouching
-			if (Physics2D.OverlapCircle(m_CeilingCheck.position, k_CeilingRadius, m_WhatIsGround))
-			{
-				crouch = true;
-			}
+			OnLandEvent.Invoke();
 		}
 
-		//only control the player if grounded or airControl is turned on
-		if (m_Grounded || m_AirControl)
+		float radius = .1f;
+		touchGround = doesTouchGround(m_GroundCheck, radius);
+		touchWallRight = doesTouchGround(m_RightCheck, radius);
+		touchCeiling = doesTouchGround(m_CeilingCheck, radius);
+
+		if (!touchGround)
 		{
+			wasInTheAir = true;
+		}
+		if (wasInTheAir && (touchGround || touchWallRight))
+		{
+			jumps = m_MaxJumps;
+			wasInTheAir = false;
+		}
 
-			// If crouching
-			if (crouch)
+		if (!wasTouchingWall && touchWallRight)
+		{
+			m_Rigidbody2D.velocity = Vector3.zero;
+			m_Rigidbody2D.gravityScale = m_wallGravity;
+			wasTouchingWall = true;
+		}
+		if (!touchWallRight)
+		{
+			m_Rigidbody2D.gravityScale = m_defaultGravity;
+			wasTouchingWall = false;
+			wasInTheAir = true;
+		}
+
+		if(m_Rigidbody2D.velocity == Vector2.zero)
+		{
+			canMove = true;
+			m_Rigidbody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
+		}
+
+		Debug.Log("Touch ground: " + touchGround);
+		Debug.Log("Touch right: " + touchWallRight);
+		Debug.Log("Touch ceiling: " + touchCeiling);
+		Debug.Log("Jumps: " + jumps);
+		Debug.Log("Velocity: " + m_Rigidbody2D.velocity);
+
+
+
+
+
+	}
+
+	public void Dash()
+
+	{
+		if (m_MaxDashes>0) {
+			Vector2 forceVector;
+			
+			if (m_FacingRight)
 			{
-				if (!m_wasCrouching)
-				{
-					m_wasCrouching = true;
-					OnCrouchEvent.Invoke(true);
-				}
-
-				// Reduce the speed by the crouchSpeed multiplier
-				move *= m_CrouchSpeed;
-
-				// Disable one of the colliders when crouching
-				if (m_CrouchDisableCollider != null)
-					m_CrouchDisableCollider.enabled = false;
+				forceVector = new Vector2(m_DashForce  * 10f, m_Rigidbody2D.velocity.y);
+				
 			}
 			else
 			{
-				// Enable the collider when not crouching
-				if (m_CrouchDisableCollider != null)
-					m_CrouchDisableCollider.enabled = true;
-
-				if (m_wasCrouching)
-				{
-					m_wasCrouching = false;
-					OnCrouchEvent.Invoke(false);
-				}
+				forceVector = new Vector2(-m_DashForce  * 10f, m_Rigidbody2D.velocity.y);
 			}
+			m_Rigidbody2D.AddForce(forceVector);
 
+			//m_Rigidbody2D.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
+			touchWallRight = false;
+			canMove = false;
+		}
+
+	}
+	public void Jump()
+	{
+		if (canMove && jumps > 0)
+		{
+			m_Rigidbody2D.velocity = new Vector2(m_Rigidbody2D.velocity.x, 0);
+			if (!touchWallRight)
+			{
+				m_Rigidbody2D.AddForce(new Vector2(0, m_JumpForce));
+			} else
+			{
+				Vector2 forceVector;
+				if (m_FacingRight)
+				{
+					forceVector = new Vector2(-Mathf.Sqrt(2) * m_JumpForce, Mathf.Sqrt(2) * m_JumpForce);
+				}
+				else
+				{
+					forceVector = new Vector2(Mathf.Sqrt(2) * m_WallJumpForce, Mathf.Sqrt(2) * m_WallJumpForce);
+				}
+				m_Rigidbody2D.AddForce(forceVector);
+			}
+			
+			jumps--;
+
+			touchWallRight = false;
+			touchGround = false;
+		}
+
+	}
+
+	public void Move(float move)
+	{
+		//only control the player if grounded or airControl is turned on
+		if (canMove && (m_Grounded || m_AirControl))
+		{
 			// Move the character by finding the target velocity
 			Vector3 targetVelocity = new Vector2(move * 10f, m_Rigidbody2D.velocity.y);
 			// And then smoothing it out and applying it to the character
@@ -126,32 +216,7 @@ public class CharacterController2D : MonoBehaviour
 				Flip();
 			}
 		}
-		// If the player should jump...
-		if (jump)
-		{
-
-			if (m_Grounded)
-			{
-
-				m_Rigidbody2D.velocity = new Vector2(m_Rigidbody2D.velocity.x, 0);
-				m_Rigidbody2D.AddForce(new Vector2(0, m_JumpForce));
-				CanDoubleJump = true;
-			}
-			else
-			{
-				if (CanDoubleJump)
-				{
-					CanDoubleJump = false;
-					m_Rigidbody2D.velocity = new Vector2(m_Rigidbody2D.velocity.x, 0);
-					m_Rigidbody2D.AddForce(new Vector2(0, m_JumpForce));
-				}
-
-			}
-		}
-
 	}
-
-
 	private void Flip()
 	{
 		// Switch the way the player is labelled as facing.
