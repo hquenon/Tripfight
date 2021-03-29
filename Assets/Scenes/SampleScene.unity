@@ -1265,12 +1265,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1716379005}
-  - component: {fileID: 1716379003}
-  - component: {fileID: 1716379006}
-  - component: {fileID: 1716379008}
   - component: {fileID: 1716379004}
   - component: {fileID: 1716379007}
-  - component: {fileID: 1716379009}
+  - component: {fileID: 1716379003}
+  - component: {fileID: 1716379008}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
@@ -1314,7 +1312,8 @@ MonoBehaviour:
   m_JumpForce: 1000
   m_WallJumpForce: 800
   m_MaxJumps: 2
-  m_DashForce: 250
+  m_DashSpeed: 40
+  m_DashTime: 0.1
   m_MaxDashes: 2
   m_defaultGravity: 5
   m_wallGravity: 1
@@ -1354,22 +1353,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!58 &1716379006
-CircleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1716379002}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: -0.008821607, y: 0}
-  serializedVersion: 2
-  m_Radius: 0.7028955
 --- !u!114 &1716379007
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1397,7 +1380,7 @@ BoxCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: -0.007430017, y: 0.5547075}
+  m_Offset: {x: 0.0064646304, y: -0.008223295}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -1408,17 +1391,5 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 1.0731438, y: 0.16719723}
-  m_EdgeRadius: 0
---- !u!114 &1716379009
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1716379002}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3a23c75accad28146a85dc0e64c24ea5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Size: {x: 1.3232474, y: 1.2930589}
+  m_EdgeRadius: 0.01

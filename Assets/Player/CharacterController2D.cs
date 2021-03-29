@@ -3,11 +3,14 @@ using UnityEngine.Events;
 
 public class CharacterController2D : MonoBehaviour
 {
+	[Header("Movements")]
+	[Space]
 	[SerializeField] private float m_JumpForce = 400f;                          // Amount of force added when the player jumps.
 	[SerializeField] private float m_WallJumpForce = 400f;                          // Amount of force added when the player jumps.
 	[SerializeField] private int m_MaxJumps = 2;
 
-	[SerializeField] private float m_DashForce = 400f;
+	[SerializeField] private float m_DashSpeed = 400f;
+	[SerializeField] private float m_DashTime = 0.5f;
 	[SerializeField] private int m_MaxDashes = 2;
 
 	[SerializeField] private float m_defaultGravity = 5;
@@ -34,13 +37,14 @@ public class CharacterController2D : MonoBehaviour
 	public class BoolEvent : UnityEvent<bool> { }
 	public BoolEvent OnCrouchEvent;
 
+	private Rigidbody2D m_Rigidbody2D;
 
 	private bool m_wasCrouching = false;
 	const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
 	private bool m_Grounded;            // Whether or not the player is grounded.
 	const float k_CeilingRadius = .2f; // Radius of the overlap circle to determine if the player can stand up
 	const float k_WallRadius = .2f; // Radius of the overlap circle to determine if the player touch a wall
-	private Rigidbody2D m_Rigidbody2D;
+
 	private bool m_FacingRight = true;  // For determining which way the player is currently facing.
 	private Vector3 m_Velocity = Vector3.zero;
 	private bool CanDoubleJump;
@@ -50,13 +54,18 @@ public class CharacterController2D : MonoBehaviour
 	private bool touchGround;
 	private bool touchCeiling;
 
-	private bool canMove;
+	private bool canMove = true;
 
-	private bool wasInTheAir;
 	private bool wasTouchingWall;
 
 
 	private int jumps;
+	private int dashes;
+
+	/*Timers*/
+	private float dashTimer = -1;
+	private float minJumpTime = 0.5f;
+	private float jumpTimer = -1;
 
 
 	private void Awake()
@@ -83,6 +92,48 @@ public class CharacterController2D : MonoBehaviour
 		return false;
 	}
 
+	private void Update()
+	{
+		//Jump and dash reset
+		if ((jumpTimer == -1) && (touchGround || touchWallRight))
+		{
+			jumps = m_MaxJumps;
+			dashes = m_MaxDashes;
+		}
+		else if (0<= jumpTimer && jumpTimer < minJumpTime)
+		{
+			jumpTimer += Time.deltaTime;
+		}
+		else
+		{
+			jumpTimer = -1;
+		}
+
+		//Dash update
+		if (dashTimer >= 0 && dashTimer < m_DashTime)
+		{
+			Vector2 speedDirection;
+			if (m_FacingRight)
+			{
+				speedDirection = Vector2.right;
+			}
+			else
+			{
+				speedDirection = Vector2.left;
+			}
+			m_Rigidbody2D.velocity = speedDirection * m_DashSpeed;
+			dashTimer += Time.deltaTime;
+		}
+		else if (dashTimer >= m_DashTime)
+		{
+			dashTimer = -1;
+			m_Rigidbody2D.velocity = Vector2.zero;
+			canMove = true;
+			m_Rigidbody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
+		}
+
+	}
+
 	private void FixedUpdate()
 	{
 		bool wasGrounded = m_Grounded;
@@ -99,16 +150,6 @@ public class CharacterController2D : MonoBehaviour
 		touchWallRight = doesTouchGround(m_RightCheck, radius);
 		touchCeiling = doesTouchGround(m_CeilingCheck, radius);
 
-		if (!touchGround)
-		{
-			wasInTheAir = true;
-		}
-		if (wasInTheAir && (touchGround || touchWallRight))
-		{
-			jumps = m_MaxJumps;
-			wasInTheAir = false;
-		}
-
 		if (!wasTouchingWall && touchWallRight)
 		{
 			m_Rigidbody2D.velocity = Vector3.zero;
@@ -119,20 +160,16 @@ public class CharacterController2D : MonoBehaviour
 		{
 			m_Rigidbody2D.gravityScale = m_defaultGravity;
 			wasTouchingWall = false;
-			wasInTheAir = true;
 		}
 
-		if(m_Rigidbody2D.velocity == Vector2.zero)
-		{
-			canMove = true;
-			m_Rigidbody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
-		}
+
 
 		Debug.Log("Touch ground: " + touchGround);
 		Debug.Log("Touch right: " + touchWallRight);
 		Debug.Log("Touch ceiling: " + touchCeiling);
 		Debug.Log("Jumps: " + jumps);
-		Debug.Log("Velocity: " + m_Rigidbody2D.velocity);
+		Debug.Log("Jump timer: " + jumpTimer);
+
 
 
 
@@ -143,23 +180,17 @@ public class CharacterController2D : MonoBehaviour
 	public void Dash()
 
 	{
-		if (m_MaxDashes>0) {
-			Vector2 forceVector;
-			
-			if (m_FacingRight)
+		if (dashes>0) {
+			dashTimer = 0;
+			if (touchWallRight)
 			{
-				forceVector = new Vector2(m_DashForce  * 10f, m_Rigidbody2D.velocity.y);
-				
+				Flip();
 			}
-			else
-			{
-				forceVector = new Vector2(-m_DashForce  * 10f, m_Rigidbody2D.velocity.y);
-			}
-			m_Rigidbody2D.AddForce(forceVector);
 
-			//m_Rigidbody2D.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
+			m_Rigidbody2D.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
 			touchWallRight = false;
 			canMove = false;
+			dashes--;
 		}
 
 	}
@@ -176,7 +207,7 @@ public class CharacterController2D : MonoBehaviour
 				Vector2 forceVector;
 				if (m_FacingRight)
 				{
-					forceVector = new Vector2(-Mathf.Sqrt(2) * m_JumpForce, Mathf.Sqrt(2) * m_JumpForce);
+					forceVector = new Vector2(-Mathf.Sqrt(2) * m_WallJumpForce, Mathf.Sqrt(2) * m_WallJumpForce);
 				}
 				else
 				{
@@ -186,9 +217,7 @@ public class CharacterController2D : MonoBehaviour
 			}
 			
 			jumps--;
-
-			touchWallRight = false;
-			touchGround = false;
+			jumpTimer = 0;
 		}
 
 	}
