@@ -2,9 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public interface IAttack
+{
+    void attack();
+}
+
 public class CharacterInputs : MonoBehaviour
 {
     public CharacterController2D controller;
+    public Object neutralAttack;
+
     public float speed;
 
 
@@ -21,6 +28,11 @@ public class CharacterInputs : MonoBehaviour
     void Update()
     {
         horizontalMove = Input.GetAxisRaw("Horizontal");
+
+        if (Input.GetButtonDown("Fire1"))
+        {
+            ((GameObject)neutralAttack).GetComponent<IAttack>().attack();
+        }
 
         if (Input.GetButtonDown("Fire3"))
         {
