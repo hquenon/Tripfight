@@ -1034,7 +1034,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1838329961, guid: 3ccfd2ef2b49e704c828ea3969c37824, type: 3}
       propertyPath: m_RootOrder
-      value: 7
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 1838329963, guid: 3ccfd2ef2b49e704c828ea3969c37824, type: 3}
       propertyPath: m_Color.b
@@ -1200,7 +1200,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   controller: {fileID: 1716379004}
   neutralAttack: {fileID: 2116873839}
-  speed: 100
+  speed: 50
 --- !u!1 &2116873839 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6428551514427908087, guid: 3ccfd2ef2b49e704c828ea3969c37824,
